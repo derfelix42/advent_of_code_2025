@@ -5,3 +5,4 @@ My ugly solutions to the AoC 2025, written in Rust - so its very fast, at least 
 ## Challenges
 - [Day 01](/day01/)
 - [Day 02](/day02/)
+- [Day 03](/day03/)
