@@ -12,14 +12,14 @@ where
 
 fn solve_puzzle_1(lines: Lines<BufReader<File>>) {
     let mut res = 0;
-    let mut array: Vec<u64> = Vec::new();
+    let mut ranges: Vec<(u64, u64)> = Vec::new();
     let mut still_in_ranges = true;
     for line in lines.map_while(Result::ok) {
         if line == "" {
             still_in_ranges = false;
-            array.sort();
-            array.dedup();
-            println!("{array:?}");
+            // array.sort();
+            // array.dedup();
+            println!("{ranges:?}");
             continue;
         }
 
@@ -28,17 +28,19 @@ fn solve_puzzle_1(lines: Lines<BufReader<File>>) {
             let mut start_stop = line.split("-");
             let start = start_stop.next().unwrap().parse::<u64>().unwrap();
             let stop = start_stop.next().unwrap().parse::<u64>().unwrap();
-            println!("-> {} - {}", start, stop);
-            for i in start..stop + 1 {
-                array.push(i);
-            }
+            ranges.push((start, stop));
         } else {
             // check new id
             let id = line.parse::<u64>().unwrap();
-            println!("-> {id}");
-            if array.contains(&id) {
-                res += 1;
+            print!("-> {id}");
+            for (start, stop) in &ranges {
+                if id >= *start && id <= *stop {
+                    res += 1;
+                    print!(" good");
+                    break;
+                }
             }
+            println!();
         }
     }
     // println!("{array:?}");
