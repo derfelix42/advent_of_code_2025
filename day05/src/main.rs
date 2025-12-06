@@ -50,54 +50,109 @@ fn solve_puzzle_1(lines: Lines<BufReader<File>>) {
 
 fn solve_puzzle_2(lines: Lines<BufReader<File>>) {
     let mut res = 0;
-    // let mut array: Vec<Vec<u8>> = Vec::new();
-    // for line in lines.map_while(Result::ok) {
-    //     let subs = line
-    //         .as_bytes()
-    //         .chunks(1)
-    //         .map(|buf| unsafe { (str::from_utf8_unchecked(buf) == "@") as u8 })
-    //         .collect::<Vec<u8>>();
+    let mut ranges: Vec<(u64, u64)> = Vec::new();
+    for line in lines.map_while(Result::ok) {
+        if line == "" {
+            break;
+        }
 
-    //     array.push(subs);
-    // }
-    // // println!("{array:?}");
+        let mut start_stop = line.split("-");
+        let start = start_stop.next().unwrap().parse::<u64>().unwrap();
+        let stop = start_stop.next().unwrap().parse::<u64>().unwrap();
+        ranges.push((start, stop));
+    }
+    ranges.sort_by(|a, b| a.0.cmp(&b.0));
 
-    // let height = array.len();
-    // let width = array[0].len();
+    let mut new_ranges = Vec::new();
 
-    // let mut iteration_counter = 0;
+    for (start, stop) in ranges {
+        println!("\nChecking range {start}-{stop}");
+        if new_ranges.len() == 0 {
+            new_ranges.push((start, stop));
+            println!("-> empty new_ranges - just appending {:?}", new_ranges);
+            continue;
+        }
 
-    // loop {
-    //     let last_res = res;
-    //     let mut new_array: Vec<Vec<u8>> = Vec::new();
-    //     // println!("\n Iteration: {iteration_counter}");
-    //     for h in 0..height {
-    //         let mut new_line: Vec<u8> = Vec::new();
-    //         for w in 0..width {
-    //             let val = kernel_sum(&array, h, w, height, width);
-    //             let mut new_spot = 0;
-    //             if array[h as usize][w as usize] == 1 {
-    //                 // print!("{val} ");
-    //                 if val < 4 {
-    //                     res += 1;
-    //                 } else {
-    //                     new_spot = 1;
-    //                 }
-    //             } else {
-    //                 // print!(". ");
-    //             }
-    //             new_line.push(new_spot);
-    //         }
-    //         new_array.push(new_line);
-    //         // println!();
-    //     }
-    //     array = new_array;
-    //     iteration_counter += 1;
+        let mut overlapping = Vec::new();
 
-    //     if iteration_counter > 100 || last_res == res {
-    //         break;
-    //     }
-    // }
+        for i in 0..new_ranges.len() {
+            let n_start = &new_ranges[i].0;
+            let n_stop = &new_ranges[i].1;
+
+            // same range
+            if &start == n_start && &stop == n_stop {
+                overlapping.push(i);
+                continue;
+            }
+
+            if &start >= n_start && &start <= n_stop || &stop >= n_start && &stop <= n_stop {
+                overlapping.push(i);
+            }
+        }
+
+        match overlapping.len() {
+            0 => {
+                new_ranges.push((start, stop));
+                println!(
+                    "-> overlapping with nothing, just appending: {:?}",
+                    new_ranges
+                );
+            }
+            1 => {
+                let n_start = new_ranges[overlapping[0]].0;
+                let n_stop = new_ranges[overlapping[0]].1;
+                print!("-> overlapping with another: {n_start}-{n_stop}");
+
+                if start >= n_start && start <= n_stop && stop > n_stop {
+                    new_ranges[overlapping[0]].1 = stop;
+                }
+
+                if stop >= n_start && stop <= n_stop && start < n_start {
+                    new_ranges[overlapping[0]].0 = start;
+                }
+                println!(" => {:?}", new_ranges);
+            }
+            2 => {
+                let n_start_1 = new_ranges[overlapping[0]].0;
+                let n_stop_1 = new_ranges[overlapping[0]].1;
+
+                let n_start_2 = new_ranges[overlapping[1]].0;
+                let n_stop_2 = new_ranges[overlapping[1]].1;
+                println!(
+                    "-> Overlapping with two ranges: {}-{} / {}-{}",
+                    n_start_1, n_stop_1, n_start_2, n_stop_2
+                );
+
+                if n_start_1 < n_start_2 {
+                    new_ranges[overlapping[0]].1 = n_stop_2;
+                    new_ranges.remove(overlapping[1]);
+                } else {
+                    new_ranges[overlapping[0]].0 = n_start_2;
+                    new_ranges.remove(overlapping[1]);
+                }
+
+                println!(
+                    "-> merged range: {}-{}",
+                    new_ranges[overlapping[0]].0, new_ranges[overlapping[0]].1
+                );
+                println!("=> {:?}", new_ranges);
+
+                // unimplemented!("Overlapping over two new_ranges!")
+            }
+            x => {
+                panic!("Unexpected number of overlappings! {x}")
+            }
+        }
+    }
+
+    println!("Final fresh ranges:");
+    for (start, stop) in &new_ranges {
+        println!("-> {start} - {stop} ({})", stop - start + 1);
+
+        res += stop - start + 1;
+    }
+
+    // println!("{ranges:?}");
 
     println!("Puzzle 2 - Result: {res}",)
 }
@@ -109,8 +164,8 @@ fn main() {
     println!("# Advent of Code 2025 | Day 04");
 
     if let Ok(lines) = read_lines("./input.txt") {
-        solve_puzzle_1(lines);
-        // solve_puzzle_2(lines);
+        // solve_puzzle_1(lines);
+        solve_puzzle_2(lines);
     }
 
     let elapsed = now.elapsed();
