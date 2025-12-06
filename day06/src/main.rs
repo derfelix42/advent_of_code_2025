@@ -29,36 +29,6 @@ fn solve_puzzle_1(lines: Lines<BufReader<File>>) {
             .filter(|x| x != "")
             .collect();
         sheet.push(test);
-
-        // println!("line: {output}");
-
-        // if line == "" {
-        //     still_in_ranges = false;
-        //     // array.sort();
-        //     // array.dedup();
-        //     println!("{ranges:?}");
-        //     continue;
-        // }
-
-        // if still_in_ranges {
-        //     // process new range
-        //     let mut start_stop = line.split("-");
-        //     let start = start_stop.next().unwrap().parse::<u64>().unwrap();
-        //     let stop = start_stop.next().unwrap().parse::<u64>().unwrap();
-        //     ranges.push((start, stop));
-        // } else {
-        //     // check new id
-        //     let id = line.parse::<u64>().unwrap();
-        //     print!("-> {id}");
-        //     for (start, stop) in &ranges {
-        //         if id >= *start && id <= *stop {
-        //             res += 1;
-        //             print!(" good");
-        //             break;
-        //         }
-        //     }
-        //     println!();
-        // }
     }
 
     println!("{sheet:?}");
@@ -99,68 +69,89 @@ fn solve_puzzle_1(lines: Lines<BufReader<File>>) {
 
 fn solve_puzzle_2(lines: Lines<BufReader<File>>) {
     let mut res = 0;
-    // let mut ranges: Vec<(u64, u64)> = Vec::new();
-    // for line in lines.map_while(Result::ok) {
-    //     if line == "" {
-    //         break;
-    //     }
+    let mut raw_sheet: Vec<String> = Vec::new();
+    let mut sheet: Vec<Vec<String>> = Vec::new();
+    for line in lines.map_while(Result::ok) {
+        raw_sheet.push(line);
+    }
 
-    //     let mut start_stop = line.split("-");
-    //     let start = start_stop.next().unwrap().parse::<u64>().unwrap();
-    //     let stop = start_stop.next().unwrap().parse::<u64>().unwrap();
-    //     ranges.push((start, stop));
-    // }
-    // ranges.sort_by(|a, b| a.0.cmp(&b.0));
+    let operators = raw_sheet.len() - 1;
+    let mut i = 0;
+    loop {
+        let mut current_problem = Vec::new();
+        if i >= raw_sheet[0].len() - 1 {
+            break;
+        }
 
-    // // De-interlace ranges
-    // let mut ignore_list: Vec<(u64, u64)> = Vec::new();
-    // for i in 0..ranges.len() {
-    //     let (mut curr_start, mut curr_stop) = *&ranges[i];
-    //     println!("\nChecking {curr_start} - {curr_stop}");
+        let mut next_i = i + 1;
+        loop {
+            if next_i >= raw_sheet[0].len() {
+                break;
+            }
 
-    //     for (start, stop) in &ranges[i + 1..] {
-    //         println!("  -> {start} - {stop}");
-    //         if ignore_list.contains(&(*start, *stop)) {
-    //             continue;
-    //         }
+            let op = raw_sheet[operators].chars().nth(next_i).unwrap();
+            println!("Op: {op}, curr_i = {next_i}, {}", op == '*' || op == '+');
+            if op == '*' || op == '+' {
+                break;
+            }
 
-    //         if start >= &curr_start && start <= &curr_stop && stop > &curr_stop {
-    //             // end needs to be extended
-    //             curr_stop = *stop;
-    //             ranges[i].1 = curr_stop;
-    //             ignore_list.push((*start, *stop));
-    //             println!(
-    //                 "    (END needs to be extended) => {}-{}",
-    //                 curr_start, curr_stop
-    //             );
-    //         }
+            next_i += 1;
+        }
 
-    //         if stop >= &curr_start && stop <= &curr_stop && start < &curr_start {
-    //             // start needs to be extended
-    //             curr_start = *start;
-    //             ignore_list.push((*start, *stop));
-    //             println!(
-    //                 "    (START needs to be extended) => {}-{}",
-    //                 curr_start, curr_stop
-    //             );
-    //         }
-    //     }
-    //     println!("New Range: {} - {}", curr_start, curr_stop)
-    // }
+        println!("Got out of next_i search at {next_i}");
 
-    // println!("Final fresh ranges:");
-    // for (start, stop) in &ranges {
-    //     if ignore_list.contains(&(*start, *stop)) {
-    //         continue;
-    //     }
+        for j in (i..next_i).rev() {
+            print!("{j}: ");
+            let mut num_string = String::new();
+            for y in 0..operators {
+                let st = &raw_sheet[y].chars().nth(j).unwrap().to_string();
+                num_string += st;
+                print!("{st}");
+            }
+            println!();
 
-    //     println!("-> {start} - {stop} ({})", stop - start + 1);
+            let x = num_string.trim();
+            if x != "" {
+                current_problem.push(x.to_owned());
+            }
+        }
 
-    //     res += stop - start + 1;
-    // }
+        current_problem.push(raw_sheet[operators].chars().nth(i).unwrap().to_string());
+        println!("Current processed Problem is: {:?}\n", current_problem);
+        sheet.push(current_problem);
 
-    // // println!("{ranges:?}");
+        i = next_i;
+    }
 
+    println!("{sheet:?}");
+
+    for problem in sheet {
+        let op = &problem[problem.len() - 1];
+
+        if op == "+" {
+            print!("Addition ({}):", problem.len());
+            let mut sum = 0;
+            for i in 0..problem.len() - 1 {
+                let num = problem[i].parse::<u64>().unwrap();
+                print!("{num} ");
+                sum += num;
+            }
+            println!(" = {sum}");
+            res += sum;
+        }
+
+        if op == "*" {
+            print!("Multiplication ({}):", problem.len());
+            let mut sum = 1;
+            for i in 0..problem.len() - 1 {
+                let num = problem[i].parse::<u64>().unwrap();
+                print!("{num} ");
+                sum *= num;
+            }
+            println!(" = {sum}");
+            res += sum;
+        }
+    }
     println!("Puzzle 2 - Result: {res}",)
 }
 
@@ -171,8 +162,8 @@ fn main() {
     println!("# Advent of Code 2025 | Day 06");
 
     if let Ok(lines) = read_lines("./input.txt") {
-        solve_puzzle_1(lines);
-        // solve_puzzle_2(lines);
+        // solve_puzzle_1(lines);
+        solve_puzzle_2(lines);
     }
 
     let elapsed = now.elapsed();
