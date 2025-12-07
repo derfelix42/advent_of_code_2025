@@ -51,7 +51,59 @@ fn solve_puzzle_1(lines: Lines<BufReader<File>>) {
 }
 
 fn solve_puzzle_2(lines: Lines<BufReader<File>>) {
-    let mut res = 0;
+    let mut res: u64 = 0;
+
+    let mut counter = 1_f32;
+    let mut beams: Vec<u64> = Vec::new();
+    for line in lines.map_while(Result::ok) {
+        counter += 1_f32;
+
+        if beams.len() == 0 {
+            beams = vec![0; line.len()];
+            let start_pos = line.chars().position(|c| c == 'S').unwrap();
+            beams[start_pos] = 1;
+            // println!("-> {beams:?}");
+            continue;
+        } else {
+            let chars: Vec<char> = line.chars().into_iter().collect();
+
+            if chars
+                .iter()
+                .filter(|&c| *c != '.')
+                .collect::<Vec<&char>>()
+                .len()
+                == 0
+            {
+                continue;
+            }
+
+            let mut new_beams = vec![0; beams.len()];
+            for (i, beam) in beams.iter().enumerate() {
+                if chars[i] == '^' {
+                    new_beams[i + 1] += *beam;
+                    new_beams[i - 1] += *beam;
+                    // new_beams.push(beam + 1);
+                    // new_beams.push(beam - 1);
+                    // res += 1;
+                } else {
+                    new_beams[i] += *beam;
+                }
+            }
+
+            beams = new_beams;
+        }
+
+        // println!("-> {beams:?}");
+        println!(
+            "{line} {res}  ({}) - {}%",
+            beams.len(),
+            counter / 142_f32 * 100_f32
+        );
+    }
+
+    for beam in beams {
+        res += beam as u64;
+    }
 
     println!("Puzzle 2 - Result: {res}",)
 }
@@ -63,8 +115,8 @@ fn main() {
     println!("# Advent of Code 2025 | Day 07");
 
     if let Ok(lines) = read_lines("./input.txt") {
-        solve_puzzle_1(lines);
-        // solve_puzzle_2(lines);
+        // solve_puzzle_1(lines);
+        solve_puzzle_2(lines);
     }
 
     let elapsed = now.elapsed();
