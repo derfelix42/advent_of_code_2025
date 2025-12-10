@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::fmt;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Lines};
@@ -11,7 +12,7 @@ where
     Ok(io::BufReader::new(file).lines())
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Lights {
     lights: Vec<bool>,
     goal: Vec<bool>,
@@ -41,8 +42,10 @@ impl Lights {
         }
     }
 
-    fn apply_button(&self, btn: Button) {
-        todo!()
+    fn apply_button(&mut self, btn: &Button) {
+        for pos in &btn.toggle {
+            self.lights[*pos as usize] = !self.lights[*pos as usize];
+        }
     }
 
     fn is_goal(&self) -> bool {
@@ -135,14 +138,43 @@ fn parse_input(lines: Lines<BufReader<File>>) -> Vec<(Lights, Vec<Button>, Jolta
 }
 
 fn solve_puzzle_1(inputs: Vec<(Lights, Vec<Button>, JoltageReading)>) {
-    let mut res = 0;
+    let mut res: u64 = 0;
 
-    for (lights, buttons, joltages) in inputs {
+    for (lights, buttons, joltages) in &inputs {
         print!("{lights} ");
         for button in buttons {
             print!("{button} ");
         }
         println!("{joltages} ");
+
+        println!("Testing buttons");
+
+        // light, button, cnt
+        let mut queue: VecDeque<(Lights, &Button, u64)> = VecDeque::new();
+        for button in buttons {
+            queue.push_back((lights.clone(), button, 0))
+        }
+
+        loop {
+            if queue.is_empty() {
+                break;
+            }
+            let first = queue.pop_front();
+            if let Some((lights, btn, cnt)) = first {
+                let mut lights = lights;
+                lights.apply_button(btn);
+                let cnt = cnt + 1;
+                if lights.is_goal() {
+                    println!("Found minimal button presses - {cnt}");
+                    res += cnt;
+                    break;
+                } else {
+                    for button in buttons {
+                        queue.push_back((lights.clone(), button, cnt))
+                    }
+                }
+            }
+        }
     }
 
     println!("Puzzle 1 - Result: {}", res)
@@ -160,7 +192,7 @@ fn main() {
 
     println!("# Advent of Code 2025 | Day 10");
 
-    if let Ok(lines) = read_lines("./test.txt") {
+    if let Ok(lines) = read_lines("./input.txt") {
         let input: Vec<(Lights, Vec<Button>, JoltageReading)> = parse_input(lines);
         solve_puzzle_1(input);
         // solve_puzzle_2(lines);
