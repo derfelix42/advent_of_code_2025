@@ -123,6 +123,10 @@ fn solve_puzzle_2(lines: Lines<BufReader<File>>) {
     let mut res = 0;
 
     let tiles = get_tiles(lines);
+    let min_x = tiles.iter().map(|x| x.x).min();
+    let min_y = tiles.iter().map(|x| x.y).min();
+    let max_x = tiles.iter().map(|x| x.x).max();
+    let max_y = tiles.iter().map(|x| x.y).max();
 
     println!("Building border:");
     let mut border: Vec<Point> = Vec::new();
@@ -171,38 +175,38 @@ fn solve_puzzle_2(lines: Lines<BufReader<File>>) {
     border.sort();
     println!("edges: {}", border.len());
 
-    println!("\nBuilding minimal spanning boxes");
-    let mut box_set = Vec::new();
-    let mut cnt = 0;
-    for i in 0..tiles.len() {
-        for j in 0..tiles.len() {
-            if i <= j {
-                continue;
-            }
+    // println!("\nBuilding minimal spanning boxes");
+    // let mut box_set = Vec::new();
+    // let mut cnt = 0;
+    // for i in 0..tiles.len() {
+    //     for j in 0..tiles.len() {
+    //         if i <= j {
+    //             continue;
+    //         }
 
-            let a = tiles[i].clone();
-            let b = tiles[j].clone();
-            let c = &Point { x: a.x, y: b.y };
-            let d = &Point { x: b.x, y: a.y };
+    //         let a = tiles[i].clone();
+    //         let b = tiles[j].clone();
+    //         let c = &Point { x: a.x, y: b.y };
+    //         let d = &Point { x: b.x, y: a.y };
 
-            // print!("{a} {b} {c} {d}");
-            let rect = Box::new(a, b);
-            // println!(" - {rect}");
+    //         // print!("{a} {b} {c} {d}");
+    //         let rect = Box::new(a, b);
+    //         // println!(" - {rect}");
 
-            if border.contains(c) && border.contains(d) {
-                box_set.push(rect);
-            }
-            print!(".");
+    //         if border.contains(c) && border.contains(d) {
+    //             box_set.push(rect);
+    //         }
+    //         print!(".");
 
-            if cnt % 1000 == 0 {
-                println!(
-                    "{:<2}%",
-                    ((i * tiles.len() + j) as f64 / (tiles.len() * tiles.len()) as f64) / 2_f64
-                )
-            }
-            cnt += 1;
-        }
-    }
+    //         if cnt % 1000 == 0 {
+    //             println!(
+    //                 "{:<2}%",
+    //                 ((i * tiles.len() + j) as f64 / (tiles.len() * tiles.len()) as f64)
+    //             )
+    //         }
+    //         cnt += 1;
+    //     }
+    // }
 
     println!("\nBuilding Boxes:");
     let mut boxes = Vec::new();
@@ -241,50 +245,14 @@ fn solve_puzzle_2(lines: Lines<BufReader<File>>) {
         let d = &Point { x: b.x, y: a.y };
         // println!("{a} {b} {c} {d}");
 
-        let mut a_in_any = false;
-        let mut b_in_any = false;
-        let mut c_in_any = false;
-        let mut d_in_any = false;
-
-        let mut in_bounding_boxes = false;
-        for test_box in &box_set {
-            // println!("  -> testing against: {test_box}");
-            if test_box == rect {
-                // println!("      (same box - continue)");
-                continue;
+        // a -> run right
+        let mut in_wall = true;
+        for x in a.x..max_x + 1 {
+            if border.contains(Point { x: x, y: a.y }) {
+                if in_wall {
+                    continue;
+                }
             }
-
-            if test_box.contains_point(a) {
-                a_in_any = true;
-                // println!("    -> contains point a {a}");
-            }
-            if test_box.contains_point(b) {
-                b_in_any = true;
-                // println!("    -> contains point b {b}");
-            }
-            if test_box.contains_point(c) {
-                c_in_any = true;
-                // println!("    -> contains point c {c}");
-            }
-            if test_box.contains_point(d) {
-                d_in_any = true;
-                // println!("    -> contains point d {d}");
-            }
-
-            if a_in_any && b_in_any && c_in_any && d_in_any {
-                in_bounding_boxes = true;
-                break;
-            }
-        }
-        if in_bounding_boxes {
-            println!("    Found largest rectangle with size {}", rect.size);
-            if rect.size > res {
-                res = rect.size;
-            }
-            break;
-        } else {
-            // println!("    This box is not within all other rects {rect}");
-            continue;
         }
     }
 
