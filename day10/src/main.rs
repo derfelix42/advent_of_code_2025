@@ -85,24 +85,78 @@ impl fmt::Display for Button {
     }
 }
 
-#[derive(Debug)]
-struct JoltageReading {
-    joltages: Vec<u8>,
+#[derive(Debug, Clone)]
+struct Joltage {
+    joltages: Vec<u16>,
+    goal: Vec<u16>,
 }
 
-impl JoltageReading {
-    fn new() -> Self {
-        Self { joltages: vec![0] }
+impl Joltage {
+    fn new(goal: &str) -> Self {
+        println!("Parsing joltage reading: {goal}");
+        let mut goal = goal;
+        if goal.starts_with("{") {
+            goal = &goal[1..goal.len() - 1];
+        }
+
+        let mut goal_vec = Vec::new();
+        for c in goal.split(",") {
+            let digit = c.parse().unwrap();
+            goal_vec.push(digit);
+        }
+
+        Self {
+            joltages: vec![0; goal_vec.len()],
+            goal: goal_vec,
+        }
+    }
+
+    fn apply_button(&mut self, btn: &Button) {
+        for b in &btn.toggle {
+            self.joltages[*b as usize] += 1;
+        }
+    }
+
+    fn apply_buttons_and_check(&self, btns: &Vec<&Button>) -> (bool, bool) {
+        let mut joltages = self.joltages.clone();
+        for btn in btns {
+            for b in &btn.toggle {
+                joltages[*b as usize] += 1;
+            }
+        }
+
+        let is_goal = joltages == self.goal;
+        let mut is_too_high = false;
+        for i in 0..joltages.len() {
+            if joltages[i] > self.goal[i] {
+                is_too_high = true;
+            }
+        }
+
+        (is_goal, is_too_high)
+    }
+
+    fn is_goal(&self) -> bool {
+        self.joltages == self.goal
+    }
+
+    fn is_too_high(&self) -> bool {
+        for i in 0..self.joltages.len() {
+            if self.joltages[i] > self.goal[i] {
+                return true;
+            }
+        }
+        false
     }
 }
 
-impl fmt::Display for JoltageReading {
+impl fmt::Display for Joltage {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{{:?}}}", self.joltages)
+        write!(f, "{{{:?} / {:?}}}", self.joltages, self.goal)
     }
 }
 
-fn parse_input(lines: Lines<BufReader<File>>) -> Vec<(Lights, Vec<Button>, JoltageReading)> {
+fn parse_input(lines: Lines<BufReader<File>>) -> Vec<(Lights, Vec<Button>, Joltage)> {
     let mut input = Vec::new();
 
     println!("Parsing input");
@@ -114,7 +168,7 @@ fn parse_input(lines: Lines<BufReader<File>>) -> Vec<(Lights, Vec<Button>, Jolta
             let light = Lights::init(parts[0]);
             // println!("  -> parsed lights: {light}");
 
-            let joltages = JoltageReading::new();
+            let joltages = Joltage::new(parts[parts.len() - 1]);
             // println!("  -> parsed joltages: {joltages}");
 
             let mut buttons = Vec::new();
@@ -137,7 +191,7 @@ fn parse_input(lines: Lines<BufReader<File>>) -> Vec<(Lights, Vec<Button>, Jolta
     input
 }
 
-fn solve_puzzle_1(inputs: Vec<(Lights, Vec<Button>, JoltageReading)>) {
+fn solve_puzzle_1(inputs: Vec<(Lights, Vec<Button>, Joltage)>) {
     let mut res: u64 = 0;
 
     for (lights, buttons, joltages) in &inputs {
@@ -180,8 +234,67 @@ fn solve_puzzle_1(inputs: Vec<(Lights, Vec<Button>, JoltageReading)>) {
     println!("Puzzle 1 - Result: {}", res)
 }
 
-fn solve_puzzle_2(lines: Lines<BufReader<File>>) {
+fn solve_puzzle_2(inputs: Vec<(Lights, Vec<Button>, Joltage)>) {
     let mut res = 0;
+
+    for (lights, buttons, joltages) in &inputs {
+        print!("{lights} ");
+        for button in buttons {
+            print!("{button} ");
+        }
+        println!("{joltages} ");
+
+        println!("Testing buttons");
+
+        // light, button, cnt
+        let mut queue: VecDeque<(&Joltage, Vec<&Button>, u64)> = VecDeque::new();
+        for button in buttons {
+            queue.push_back((joltages, vec![button], 0))
+        }
+
+        println!("-> Queue length to start with: {}", queue.len());
+
+        // let mut current_depth = 0;
+        let mut iterations = 0;
+        loop {
+            iterations += 1;
+            if iterations % 100000 == 0 {
+                println!(
+                    "-> Queue length after {iterations} iterations: {}",
+                    queue.len()
+                );
+            }
+            if queue.is_empty() {
+                break;
+            }
+            let first = queue.pop_front();
+            if let Some((orig_joltages, btns, cnt)) = first {
+                let mut joltages = orig_joltages.clone();
+                let (is_goal, is_too_high) = joltages.apply_buttons_and_check(&btns);
+                let cnt = cnt + 1;
+                // if current_depth < cnt {
+                //     println!("Gooing deeper! {cnt}");
+                //     current_depth = cnt;
+                // }
+                if is_goal {
+                    println!(
+                        "Found minimal button presses - {cnt} (after {iterations} iterations)"
+                    );
+                    res += cnt;
+                    break;
+                } else if is_too_high {
+                    // println!("Went {cnt} deep and it was wrong!");
+                    continue;
+                } else {
+                    for button in buttons {
+                        let mut btns = btns.clone();
+                        btns.push(button);
+                        queue.push_back((orig_joltages, btns, cnt))
+                    }
+                }
+            }
+        }
+    }
 
     println!("Puzzle 2 - Result: {}", res)
 }
@@ -193,9 +306,9 @@ fn main() {
     println!("# Advent of Code 2025 | Day 10");
 
     if let Ok(lines) = read_lines("./input.txt") {
-        let input: Vec<(Lights, Vec<Button>, JoltageReading)> = parse_input(lines);
-        solve_puzzle_1(input);
-        // solve_puzzle_2(lines);
+        let input: Vec<(Lights, Vec<Button>, Joltage)> = parse_input(lines);
+        // solve_puzzle_1(input);
+        solve_puzzle_2(input);
     }
 
     let elapsed = now.elapsed();
